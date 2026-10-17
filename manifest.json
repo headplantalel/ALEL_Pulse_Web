@@ -1,0 +1,12 @@
+{
+  "name": "ALEL Pulse",
+  "short_name": "ALEL Pulse",
+  "start_url": "/ALEL_Pulse_Web/",
+  "display": "standalone",
+  "background_color": "#F4F7F6",
+  "theme_color": "#0D5C58",
+  "icons": [
+    { "src": "pulse.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "pulse.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
