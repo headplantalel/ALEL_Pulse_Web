@@ -14,25 +14,27 @@
 
   let adminPane = 'users', masterSel = 'lines', masterRows = [], selRows = new Set();
 
-  // wire sub-nav
-  document.querySelectorAll('.a-sub').forEach(b => b.addEventListener('click', () => {
-    adminPane = b.dataset.a;
-    document.querySelectorAll('.a-sub').forEach(x => x.classList.toggle('bg-enovar', x === b));
-    document.querySelectorAll('.a-pane').forEach(x => x.classList.add('hidden'));
-    $('a-' + adminPane).classList.remove('hidden');
-    if (adminPane === 'users') renderAdminUsers();
-    if (adminPane === 'master') renderAdminMaster();
-    if (adminPane === 'audit') renderAdminAudit();
-  }));
-  document.querySelectorAll('.m-sub2').forEach(b => b.addEventListener('click', () => { masterSel = b.dataset.m2; renderAdminMaster(); }));
-  $('m2-add').addEventListener('click', () => adminMasterForm({}));
-  $('m2-export').addEventListener('click', exportMaster);
-  $('m2-import').addEventListener('change', importMaster);
-  $('ad-load').addEventListener('click', loadAdminData);
-  $('ad-trash').addEventListener('click', () => batchAdminData('trash'));
-  $('ad-restore').addEventListener('click', () => batchAdminData('restore'));
-  $('ad-hard').addEventListener('click', () => batchAdminData('hard'));
-  $('a-add-btn').addEventListener('click', addUser);
+  function wireDom() {
+    document.querySelectorAll('.a-sub').forEach(b => b.addEventListener('click', () => {
+      adminPane = b.dataset.a;
+      document.querySelectorAll('.a-sub').forEach(x => x.classList.toggle('bg-enovar', x === b));
+      document.querySelectorAll('.a-pane').forEach(x => x.classList.add('hidden'));
+      $('a-' + adminPane).classList.remove('hidden');
+      if (adminPane === 'users') renderAdminUsers();
+      if (adminPane === 'master') renderAdminMaster();
+      if (adminPane === 'audit') renderAdminAudit();
+    }));
+    document.querySelectorAll('.m-sub2').forEach(b => b.addEventListener('click', () => { masterSel = b.dataset.m2; renderAdminMaster(); }));
+    $('m2-add').addEventListener('click', () => adminMasterForm({}));
+    $('m2-export').addEventListener('click', exportMaster);
+    $('m2-import').addEventListener('change', importMaster);
+    $('ad-load').addEventListener('click', loadAdminData);
+    $('ad-trash').addEventListener('click', () => batchAdminData('trash'));
+    $('ad-restore').addEventListener('click', () => batchAdminData('restore'));
+    $('ad-hard').addEventListener('click', () => batchAdminData('hard'));
+    $('a-add-btn').addEventListener('click', addUser);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireDom); else wireDom();
 
   async function myRole() { return (await window.sb.from('users').select('role').eq('id', (await window.sb.auth.getUser()).data.user.id).maybeSingle()).data?.role; }
 
@@ -178,11 +180,11 @@
   window.renderAdminHook = () => { document.querySelector('.a-sub[data-a="users"]').click(); };
   window.settingsHook = () => { $('s-ver').textContent = 'data through ' + new Date().toISOString().slice(0, 10); };
 
-  // master item lookup cache for data edit
-  window.sb.from('items').select('id,code,name').then(({ data }) => { window.__masterCacheItems = data || []; });
-
-  // modal root
-  const root = document.createElement('div');
-  root.id = 'admin-modal-root';
-  document.body.appendChild(root);
+  function wireTail() {
+    window.sb.from('items').select('id,code,name').then(({ data }) => { window.__masterCacheItems = data || []; });
+    const root = document.createElement('div');
+    root.id = 'admin-modal-root';
+    document.body.appendChild(root);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', wireTail); else wireTail();
 })();
