@@ -242,8 +242,9 @@ window.callAPI = async function (payload, callback, retries) {
       (data || []).forEach(r => {
         const d = parseAny(r.entry_date); const key = ddMmm(d);
         if (!entriesByDate[key]) { entriesByDate[key] = []; dates.push(key); }
-        let ri = prodRowToId.get(r.id);
-        if (ri === undefined) { ri = ++prodRowIndex; prodRowToId.set(r.id, ri); }
+        let ri = null;
+        prodRowToId.forEach((v, k) => { if (v === r.id) ri = k; });
+        if (ri === null) { ri = ++prodRowIndex; prodRowToId.set(ri, r.id); }
         entriesByDate[key].push({
           rowIndex: ri, itemName: itemOf(r.item_id) ? itemOf(r.item_id).name : '', line: lineName(itemOf(r.item_id) ? itemOf(r.item_id).line_id : null),
           time: r.time_slot, qty: r.qty, manpower: r.mp || 0, remarks: r.remarks || '',
