@@ -415,7 +415,6 @@
             <svg class="w-3.5 h-3.5 text-enovar" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> <span data-i18n="ai_insights">AI Insights</span>
           </button>
           <button id="tab-admin" onclick="switchDashTab('admin')" class="hidden px-5 py-1.5 text-[11px] sm:text-xs font-bold rounded-lg text-gray-500 hover:text-gray-800 transition-all whitespace-nowrap flex items-center gap-1">⚙ Admin</button>
-          <button id="tab-settings" onclick="switchDashTab('settings')" class="hidden px-5 py-1.5 text-[11px] sm:text-xs font-bold rounded-lg text-gray-500 hover:text-gray-800 transition-all whitespace-nowrap flex items-center gap-1">⚙ Settings</button>
 <button id="tab-quality" onclick="switchDashTab('quality')" class="px-5 py-1.5 text-[11px] sm:text-xs font-bold rounded-lg text-gray-500 hover:text-gray-800 transition-all whitespace-nowrap flex items-center gap-1">
             <svg class="w-3.5 h-3.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> <span data-i18n="quality">Quality</span>
           </button>
@@ -673,10 +672,6 @@
             <div class="bg-white/60 backdrop-blur-xl rounded-[1.5rem] border border-white shadow-sm overflow-auto max-h-[65vh]"><table class="w-full text-[11px]" id="a-audit-table"></table></div>
           </div>
         </div>
-        <div id="view-settings" class="w-full min-h-full flex flex-col space-y-3 hidden max-w-7xl mx-auto">
-          <div class="bg-white/60 backdrop-blur-xl rounded-[1.5rem] border border-white shadow-sm p-5 space-y-3 max-w-md">
-            <h3 class="text-[11px] font-black text-slate-800 uppercase tracking-widest">Settings</h3>
-            <div class="flex items-center justify-between"><span class="text-xs font-bold text-slate-600">Theme</span><button onclick="cycleTheme()" class="text-[11px] font-bold bg-white border border-gray-200 px-3 py-1.5 rounded-lg">Light / Dark / Sepia</button></div>
             <div class="flex items-center justify-between"><span class="text-xs font-bold text-slate-600">Language</span><button onclick="cycleLanguage()" class="text-[11px] font-bold bg-white border border-gray-200 px-3 py-1.5 rounded-lg">বাংলা / English</button></div>
             <div class="flex items-center justify-between"><span class="text-xs font-bold text-slate-600">Admin console</span><a href="https://headplantalel.github.io/ALEL_Pulse_Admin/" target="_blank" class="text-[11px] font-bold text-enovar underline">Open →</a></div>
             <div class="text-[10px] font-bold text-slate-400">ALEL Pulse v2 · Supabase · <span id="s-ver"></span></div>
@@ -1794,7 +1789,7 @@ let currentMetric = localStorage.getItem('currentMetric') || 'productivity';
       if (document.activeElement) document.activeElement.blur(); // FIX: Drops focus to prevent auto-opening date pickers
       
        activeDashTab = tab;
-      ['section', 'master', 'management', 'ai', 'quality', 'admin', 'settings'].forEach(t => {
+      ['section', 'master', 'management', 'ai', 'quality', 'admin'].forEach(t => {
         let btn = document.getElementById('tab-' + t);
         let view = document.getElementById('view-' + t);
         if(t === tab) {
@@ -1829,7 +1824,6 @@ let currentMetric = localStorage.getItem('currentMetric') || 'productivity';
       }
       
       if (tab === 'admin' && window.renderAdminHook) window.renderAdminHook();
-      if (tab === 'settings' && window.settingsHook) window.settingsHook();
 
       // Crucial fix for ApexCharts rendering in hidden divs
       setTimeout(() => {

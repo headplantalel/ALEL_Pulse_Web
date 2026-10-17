@@ -9,7 +9,6 @@
   window.toggleAdminTabs = function (isAdmin) {
     window.isAdminUser = !!isAdmin;
     $('tab-admin').classList.toggle('hidden', !isAdmin);
-    $('tab-settings').classList.toggle('hidden', !isAdmin);
   };
 
   let adminPane = 'users', masterSel = 'lines', masterRows = [], selRows = new Set();
@@ -178,7 +177,6 @@
   }
 
   window.renderAdminHook = () => { document.querySelector('.a-sub[data-a="users"]').click(); };
-  window.settingsHook = () => { $('s-ver').textContent = 'data through ' + new Date().toISOString().slice(0, 10); };
 
   function wireTail() {
     window.sb.from('items').select('id,code,name').then(({ data }) => { window.__masterCacheItems = data || []; });
