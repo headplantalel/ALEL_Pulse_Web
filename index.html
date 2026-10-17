@@ -38,6 +38,8 @@
   <link href="https://alelpulse.vercel.app/output.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="shim.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="admin-tab.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js" defer></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/apexcharts" defer></script>
@@ -411,7 +413,9 @@
           <button id="tab-ai" onclick="switchDashTab('ai')" class="hidden px-5 py-1.5 text-[11px] sm:text-xs font-bold rounded-lg text-gray-500 hover:text-gray-800 transition-all whitespace-nowrap flex items-center gap-1">
             <svg class="w-3.5 h-3.5 text-enovar" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> <span data-i18n="ai_insights">AI Insights</span>
           </button>
-          <button id="tab-quality" onclick="switchDashTab('quality')" class="px-5 py-1.5 text-[11px] sm:text-xs font-bold rounded-lg text-gray-500 hover:text-gray-800 transition-all whitespace-nowrap flex items-center gap-1">
+          <button id="tab-admin" onclick="switchDashTab('admin')" class="hidden px-5 py-1.5 text-[11px] sm:text-xs font-bold rounded-lg text-gray-500 hover:text-gray-800 transition-all whitespace-nowrap flex items-center gap-1">⚙ Admin</button>
+          <button id="tab-settings" onclick="switchDashTab('settings')" class="hidden px-5 py-1.5 text-[11px] sm:text-xs font-bold rounded-lg text-gray-500 hover:text-gray-800 transition-all whitespace-nowrap flex items-center gap-1">⚙ Settings</button>
+<button id="tab-quality" onclick="switchDashTab('quality')" class="px-5 py-1.5 text-[11px] sm:text-xs font-bold rounded-lg text-gray-500 hover:text-gray-800 transition-all whitespace-nowrap flex items-center gap-1">
             <svg class="w-3.5 h-3.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> <span data-i18n="quality">Quality</span>
           </button>
         </div>
@@ -613,7 +617,71 @@
        </div>
 
        <!-- QUALITY DASHBOARD VIEW -->
-       <div id="view-quality" class="w-full min-h-full xl:h-full flex flex-col space-y-3 hidden max-w-7xl mx-auto">
+       <div id="view-admin" class="w-full min-h-full flex flex-col space-y-3 hidden max-w-7xl mx-auto">
+          <div class="flex gap-2 flex-wrap shrink-0">
+            <button class="a-sub btn px-3 py-1.5 text-[11px] font-bold rounded-lg bg-white text-gray-600 border border-gray-200" data-a="users">Users &amp; Requests</button>
+            <button class="a-sub btn px-3 py-1.5 text-[11px] font-bold rounded-lg bg-white text-gray-600 border border-gray-200" data-a="master">Master Data</button>
+            <button class="a-sub btn px-3 py-1.5 text-[11px] font-bold rounded-lg bg-white text-gray-600 border border-gray-200" data-a="data">Data Edit</button>
+            <button class="a-sub btn px-3 py-1.5 text-[11px] font-bold rounded-lg bg-white text-gray-600 border border-gray-200" data-a="audit">Audit</button>
+            <span class="text-[10px] font-bold text-slate-400 self-center">Full console: headplantalel.github.io/ALEL_Pulse_Admin</span>
+          </div>
+          <div id="a-users" class="a-pane space-y-3">
+            <div class="bg-white/60 backdrop-blur-xl rounded-[1.5rem] border border-white shadow-sm p-4">
+              <h3 class="text-[11px] font-black text-slate-800 uppercase tracking-widest mb-2">Access requests <span id="a-req-badge" class="hidden bg-red-500 text-white text-[9px] font-black rounded-full px-1.5 py-0.5"></span></h3>
+              <div class="overflow-auto max-h-56"><table class="w-full text-[11px]" id="a-requests"></table></div>
+            </div>
+            <div class="bg-white/60 backdrop-blur-xl rounded-[1.5rem] border border-white shadow-sm p-4">
+              <div class="flex items-center gap-2 flex-wrap mb-2">
+                <h3 class="text-[11px] font-black text-slate-800 uppercase tracking-widest mr-auto">Users</h3>
+                <input id="a-add-email" placeholder="email@akijlight..." class="text-[11px] border border-gray-200 rounded-lg px-2 py-1.5 bg-white w-48">
+                <input id="a-add-name" placeholder="Name" class="text-[11px] border border-gray-200 rounded-lg px-2 py-1.5 bg-white w-32">
+                <select id="a-add-role" class="text-[11px] border border-gray-200 rounded-lg px-2 py-1.5 bg-white"><option>operator</option><option>quality</option><option>manager</option><option>admin</option></select>
+                <button id="a-add-btn" class="text-[11px] font-bold text-white bg-enovar px-3 py-1.5 rounded-lg">Add</button>
+              </div>
+              <div class="overflow-auto max-h-96"><table class="w-full text-[11px]" id="a-users-table"></table></div>
+            </div>
+          </div>
+          <div id="a-master" class="a-pane hidden space-y-3">
+            <div class="flex gap-2 flex-wrap">
+              <button class="m-sub2 text-[11px] font-bold rounded-lg px-3 py-1.5 bg-white border border-gray-200" data-m2="lines">Lines</button>
+              <button class="m-sub2 text-[11px] font-bold rounded-lg px-3 py-1.5 bg-white border border-gray-200" data-m2="items">Items</button>
+              <button class="m-sub2 text-[11px] font-bold rounded-lg px-3 py-1.5 bg-white border border-gray-200" data-m2="defect_types">Defect Types</button>
+              <button class="m-sub2 text-[11px] font-bold rounded-lg px-3 py-1.5 bg-white border border-gray-200" data-m2="time_slots">Time Slots</button>
+              <span class="ml-auto flex gap-2">
+                <button id="m2-add" class="text-[11px] font-bold text-white bg-enovar px-3 py-1.5 rounded-lg">+ Add</button>
+                <button id="m2-export" class="text-[11px] font-bold bg-white border border-gray-200 px-3 py-1.5 rounded-lg">⬇ XLSX</button>
+                <label class="text-[11px] font-bold bg-white border border-gray-200 px-3 py-1.5 rounded-lg cursor-pointer">⬆ Import<input id="m2-import" type="file" accept=".xlsx,.xls,.csv" class="hidden"></label>
+              </span>
+            </div>
+            <div class="bg-white/60 backdrop-blur-xl rounded-[1.5rem] border border-white shadow-sm overflow-auto max-h-[60vh]"><table class="w-full text-[11px]" id="a-master-table"></table></div>
+          </div>
+          <div id="a-data" class="a-pane hidden space-y-3">
+            <div class="bg-white/60 backdrop-blur-xl rounded-[1.5rem] border border-white shadow-sm p-3 flex gap-2 flex-wrap items-end">
+              <div><label class="text-[9px] font-bold text-slate-500 block">Dataset</label><select id="ad-set" class="text-[11px] border border-gray-200 rounded-lg px-2 py-1.5 bg-white"><option value="production_entries">Production</option><option value="defects">Defects</option></select></div>
+              <div><label class="text-[9px] font-bold text-slate-500 block">Date</label><input id="ad-date" type="date" class="text-[11px] border border-gray-200 rounded-lg px-2 py-1.5 bg-white"></div>
+              <div><label class="text-[9px] font-bold text-slate-500 block">Status</label><select id="ad-status" class="text-[11px] border border-gray-200 rounded-lg px-2 py-1.5 bg-white"><option value="active">Active</option><option value="trash">Trash</option><option value="both">Both</option></select></div>
+              <button id="ad-load" class="text-[11px] font-bold text-white bg-enovar px-3 py-1.5 rounded-lg">Load</button>
+              <span id="ad-sel" class="text-[10px] font-bold text-slate-500"></span>
+              <button id="ad-trash" class="text-[11px] font-bold bg-amber-100 text-amber-700 px-3 py-1.5 rounded-lg">Trash selected</button>
+              <button id="ad-restore" class="text-[11px] font-bold bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg">Restore selected</button>
+              <button id="ad-hard" class="hidden text-[11px] font-bold bg-red-100 text-red-700 px-3 py-1.5 rounded-lg">Permanent delete</button>
+            </div>
+            <div class="bg-white/60 backdrop-blur-xl rounded-[1.5rem] border border-white shadow-sm overflow-auto max-h-[55vh]"><table class="w-full text-[11px]" id="a-data-table"></table></div>
+          </div>
+          <div id="a-audit" class="a-pane hidden">
+            <div class="bg-white/60 backdrop-blur-xl rounded-[1.5rem] border border-white shadow-sm overflow-auto max-h-[65vh]"><table class="w-full text-[11px]" id="a-audit-table"></table></div>
+          </div>
+        </div>
+        <div id="view-settings" class="w-full min-h-full flex flex-col space-y-3 hidden max-w-7xl mx-auto">
+          <div class="bg-white/60 backdrop-blur-xl rounded-[1.5rem] border border-white shadow-sm p-5 space-y-3 max-w-md">
+            <h3 class="text-[11px] font-black text-slate-800 uppercase tracking-widest">Settings</h3>
+            <div class="flex items-center justify-between"><span class="text-xs font-bold text-slate-600">Theme</span><button onclick="cycleTheme()" class="text-[11px] font-bold bg-white border border-gray-200 px-3 py-1.5 rounded-lg">Light / Dark / Sepia</button></div>
+            <div class="flex items-center justify-between"><span class="text-xs font-bold text-slate-600">Language</span><button onclick="cycleLanguage()" class="text-[11px] font-bold bg-white border border-gray-200 px-3 py-1.5 rounded-lg">বাংলা / English</button></div>
+            <div class="flex items-center justify-between"><span class="text-xs font-bold text-slate-600">Admin console</span><a href="https://headplantalel.github.io/ALEL_Pulse_Admin/" target="_blank" class="text-[11px] font-bold text-enovar underline">Open →</a></div>
+            <div class="text-[10px] font-bold text-slate-400">ALEL Pulse v2 · Supabase · <span id="s-ver"></span></div>
+          </div>
+        </div>
+<div id="view-quality" class="w-full min-h-full xl:h-full flex flex-col space-y-3 hidden max-w-7xl mx-auto">
 
           <!-- KPI Row -->
           <div class="grid grid-cols-2 md:grid-cols-5 gap-2 sm:gap-4 shrink-0">
@@ -922,7 +990,10 @@ let currentMetric = localStorage.getItem('currentMetric') || 'productivity';
       if (targetPortal === 'entry') {
         if (data.authorizedEntry) setupEntryAppUI(data); else showDenied();
       } else if (targetPortal === 'dashboard') {
-        if (data.authorizedDashboard) setupDashboardUI(data); else showDenied();
+        if (data.authorizedDashboard) {
+          setupDashboardUI(data);
+          if (window.toggleAdminTabs) window.toggleAdminTabs(data.isAdmin === true);
+        } else showDenied();
       } else if (targetPortal === 'quality') {
         if (data.authorizedFPY) setupQualityAppUI(data); else showDenied();
       }
@@ -1722,7 +1793,7 @@ let currentMetric = localStorage.getItem('currentMetric') || 'productivity';
       if (document.activeElement) document.activeElement.blur(); // FIX: Drops focus to prevent auto-opening date pickers
       
        activeDashTab = tab;
-      ['section', 'master', 'management', 'ai', 'quality'].forEach(t => {
+      ['section', 'master', 'management', 'ai', 'quality', 'admin', 'settings'].forEach(t => {
         let btn = document.getElementById('tab-' + t);
         let view = document.getElementById('view-' + t);
         if(t === tab) {
@@ -1756,6 +1827,9 @@ let currentMetric = localStorage.getItem('currentMetric') || 'productivity';
         }
       }
       
+      if (tab === 'admin' && window.renderAdminHook) window.renderAdminHook();
+      if (tab === 'settings' && window.settingsHook) window.settingsHook();
+
       // Crucial fix for ApexCharts rendering in hidden divs
       setTimeout(() => {
         buildDashboardFilters();
