@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALEL Pulse</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<style>
+  body { background: linear-gradient(135deg, #F4F7F6 0%, #E6EDEB 100%); min-height: 100vh; font-family: Inter, system-ui, sans-serif; }
+  .card { background: rgba(255,255,255,.85); border: 1px solid #fff; border-radius: 1.2rem; box-shadow: 0 8px 30px rgba(0,0,0,.04); }
+  .btn { padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; }
+  .btn-pri { background: #0f766e; color: #fff; }
+  .btn-sec { background: #e2e8f0; color: #334155; }
+  .badge { padding: 1px 8px; border-radius: 99px; font-size: 10px; font-weight: 800; }
+  th { background: #f8fafc; text-align: left; font-weight: 800; color: #475569; position: sticky; top: 0; padding: 8px; font-size: 11px; white-space: nowrap; }
+  td { padding: 7px 8px; font-size: 12px; border-bottom: 1px solid #eef2f7; white-space: nowrap; }
+  .tab { padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 800; color: #64748b; cursor: pointer; }
+  .tab.active { background: #0f766e; color: #fff; }
+  input, select { border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 10px; font-size: 13px; background: #fff; }
+  .toast { position: fixed; bottom: 18px; right: 18px; background: #0f172a; color: #fff; padding: 9px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; z-index: 99; }
+</style>
+</head>
+<body>
+<div id="login-view" class="min-h-screen flex items-center justify-center p-4">
+  <div class="card p-8 w-full max-w-sm text-center">
+    <div class="text-3xl font-black" style="color:#0f766e">ALEL Pulse</div>
+    <div class="text-sm text-slate-500 font-semibold mt-1 mb-6">Real-Time Production Telemetry</div>
+    <button id="login-google" class="w-full py-3 rounded-lg border border-slate-300 bg-white font-bold text-slate-700 hover:bg-slate-50 flex items-center justify-center gap-2" style="cursor:pointer">
+      <svg width="17" height="17" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      Sign in with Google
+    </button>
+    <p class="text-[11px] text-slate-400 font-semibold mt-3">@akijlightengineering.com — company account</p>
+    <p id="login-err" class="text-red-600 text-xs font-semibold mt-2"></p>
+  </div>
+</div>
+
+<div id="pending-view" class="min-h-screen flex items-center justify-center p-4 hidden">
+  <div class="card p-8 w-full max-w-md text-center">
+    <div class="text-2xl font-black text-amber-600">Access Pending</div>
+    <p class="text-sm text-slate-600 mt-2 font-semibold">Your account <span id="pending-email" class="font-black"></span> is not activated yet.</p>
+    <button id="req-access-btn" class="btn btn-pri w-full mt-4 py-3">Request Access</button>
+    <div id="req-form" class="hidden mt-3 text-left space-y-2">
+      <label class="text-[11px] font-bold text-slate-500 block">What do you need access for?</label>
+      <select id="req-role" class="w-full"><option value="operator">Production Entry</option><option value="quality">Quality / Defect Entry</option><option value="manager">Dashboards (Daily Status / Summary / Analytics)</option></select>
+      <label class="text-[11px] font-bold text-slate-500 block">Note (optional)</label>
+      <input id="req-note" class="w-full" placeholder="e.g. I am the line supervisor of LT-03">
+      <button id="req-submit" class="btn btn-pri w-full">Send Request</button>
+      <p id="req-done" class="hidden text-green-700 text-xs font-bold">Request sent! The admin has been notified by email.</p>
+    </div>
+    <button id="pending-logout" class="text-xs font-bold text-slate-400 mt-4 underline" style="cursor:pointer">Sign out</button>
+  </div>
+</div>
+
+<div id="app-view" class="hidden">
+  <header class="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 py-2.5 flex items-center gap-2 flex-wrap">
+      <div class="font-black text-lg mr-2" style="color:#0f766e">ALEL Pulse</div>
+      <span id="live-dot" class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+      <div id="tabs" class="flex gap-1 flex-wrap"></div>
+      <div class="ml-auto flex items-center gap-2">
+        <span id="whoami" class="text-[11px] font-bold text-slate-500"></span>
+        <button id="logout-btn" class="btn btn-sec">Log out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-4">
+    <section id="tab-entry" class="tab-pane">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="card p-4">
+          <h3 class="font-black text-slate-800 mb-3">Production Entry</h3>
+          <label class="text-[11px] font-bold text-slate-500">Date</label>
+          <input id="e-date" type="date" class="w-full mb-2">
+          <label class="text-[11px] font-bold text-slate-500">Line</label>
+          <select id="e-line" class="w-full mb-2"><option value="">— select line —</option></select>
+          <label class="text-[11px] font-bold text-slate-500">Item</label>
+          <select id="e-item" class="w-full mb-2"><option value="">— select item —</option></select>
+          <label class="text-[11px] font-bold text-slate-500">Time slot</label>
+          <select id="e-slot" class="w-full mb-2"><option value="">— select slot —</option></select>
+          <div class="grid grid-cols-2 gap-2 mb-2">
+            <div><label class="text-[11px] font-bold text-slate-500">Production qty</label><input id="e-qty" type="number" class="w-full"></div>
+            <div><label class="text-[11px] font-bold text-slate-500">Manpower</label><input id="e-mp" type="number" class="w-full"></div>
+          </div>
+          <div class="text-[11px] font-bold text-slate-500 mb-1">Productivity: <span id="e-prod" class="text-teal-700">—</span></div>
+          <label class="text-[11px] font-bold text-slate-500">Remarks (optional)</label>
+          <input id="e-remarks" class="w-full mb-3">
+          <button id="e-submit" class="btn btn-pri w-full py-3">Submit Entry</button>
+        </div>
+        <div class="card p-4">
+          <h3 class="font-black text-slate-800 mb-3">My Entries Today</h3>
+          <div class="overflow-auto max-h-[420px]"><table class="w-full" id="my-entries"></table></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-quality" class="tab-pane hidden">
+      <div class="card p-4 max-w-xl">
+        <h3 class="font-black text-slate-800 mb-3">Defect Entry</h3>
+        <label class="text-[11px] font-bold text-slate-500">Date</label>
+        <input id="q-date" type="date" class="w-full mb-2">
+        <label class="text-[11px] font-bold text-slate-500">Item</label>
+        <select id="q-item" class="w-full mb-2"><option value="">— select item —</option></select>
+        <label class="text-[11px] font-bold text-slate-500">Problem type</label>
+        <select id="q-type" class="w-full mb-2"><option value="">— select type —</option></select>
+        <label class="text-[11px] font-bold text-slate-500">Time slot</label>
+        <select id="q-slot" class="w-full mb-2"><option value="">— select slot —</option></select>
+        <label class="text-[11px] font-bold text-slate-500">Defective qty</label>
+        <input id="q-qty" type="number" class="w-full mb-3">
+        <button id="q-submit" class="btn btn-pri w-full py-3">Submit Defect</button>
+      </div>
+    </section>
+
+    <section id="tab-daily" class="tab-pane hidden">
+      <div class="card p-4 mb-3 flex items-center gap-2 flex-wrap">
+        <label class="text-[11px] font-bold text-slate-500">Date</label>
+        <input id="d-date" type="date" class="w-36">
+        <label class="text-[11px] font-bold text-slate-500 ml-2">Section</label>
+        <select id="d-section" class="w-44"><option value="all">All Sections</option></select>
+        <label class="text-[11px] font-bold text-slate-500 ml-2">Metric</label>
+        <select id="d-metric" class="w-40"><option value="qty">Production</option><option value="prod">Productivity</option></select>
+        <span class="text-[11px] font-semibold text-slate-400" id="d-note"></span>
+      </div>
+      <div id="d-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3"></div>
+    </section>
+
+    <section id="tab-summary" class="tab-pane hidden">
+      <div class="card p-4 mb-3 flex items-center gap-2 flex-wrap">
+        <label class="text-[11px] font-bold text-slate-500">Date</label>
+        <input id="s-date" type="date" class="w-36">
+        <select id="s-section" class="w-44"><option value="all">All Sections</option></select>
+        <select id="s-line" class="w-40"><option value="all">All Lines</option></select>
+        <select id="s-item" class="w-56"><option value="all">All Items</option></select>
+        <select id="s-pg" class="w-40"><option value="all">All PGs</option></select>
+        <button id="s-clear" class="btn btn-sec">Clear</button>
+        <button id="s-export" class="btn btn-pri ml-auto">Export CSV</button>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3" id="s-kpis"></div>
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-3 mb-3">
+        <div class="card p-3"><h3 class="text-[11px] font-black text-green-700 uppercase mb-2">⭐ Best Performer</h3><div id="s-best" class="text-xs font-semibold text-slate-700"></div></div>
+        <div class="card p-3"><h3 class="text-[11px] font-black text-red-600 uppercase mb-2">⚠ Needs Attention</h3><div id="s-worst" class="text-xs font-semibold text-slate-700"></div></div>
+        <div class="card p-3"><h3 class="text-[11px] font-black text-slate-600 uppercase mb-2">🏆 Line Ranking</h3><div id="s-ranking" class="space-y-1"></div></div>
+      </div>
+      <div class="card overflow-auto max-h-[55vh]">
+        <table class="w-full" id="s-matrix"></table>
+      </div>
+    </section>
+
+    <section id="tab-analytics" class="tab-pane hidden">
+      <div class="card p-4 mb-3 flex items-center gap-2 flex-wrap">
+        <label class="text-[11px] font-bold text-slate-500">Range</label>
+        <select id="a-preset" class="w-44">
+          <option value="7">Last 7 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="today">Today</option>
+          <option value="all">All time</option>
+        </select>
+        <label class="text-[11px] font-bold text-slate-500 ml-2">Metric</label>
+        <select id="a-metric" class="w-40"><option value="qty">Production qty</option><option value="prod">Productivity</option></select>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3" id="a-kpis"></div>
+      <div class="card p-3"><div id="a-chart" class="w-full" style="height:340px"></div></div>
+    </section>
+  </main>
+</div>
+<div id="toast-root"></div>
+
+<script>
+const SUPABASE_URL = "https://bskfvdgqzberzcdqmiku.supabase.co";
+const ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJza2Z2ZGdxemJlcnpjZHFtaWt1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIwNTQxNzUsImV4cCI6MjEwNzYzMDE3NX0.bjHLDs6NV5-clu2HIL-tmDDV6nBnt_fi0Q17PUY0Yhc";
+const sb = supabase.createClient(SUPABASE_URL, ANON);
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const todayISO = () => new Date().toISOString().slice(0,10);
+const toast = m => { const d = document.createElement('div'); d.className = 'toast'; d.textContent = m; $('toast-root').appendChild(d); setTimeout(() => d.remove(), 3500); };
+const fmtDate = d => new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+
+let ME = null, LINES = [], ITEMS = [], SLOTS = [], DTYPES = [], CH = null;
+
+async function boot() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) await enter(session.user);
+}
+$('login-google').onclick = async () => {
+  $('login-err').textContent = '';
+  const { error } = await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: 'https://headplantalel.github.io/ALEL_Pulse_Web/' } });
+  if (error) $('login-err').textContent = error.message;
+};
+
+async function enter(user) {
+  const { data } = await sb.from('users').select('id,email,name,role,active').eq('id', user.id).maybeSingle();
+  if (!data) return;
+  ME = data;
+  if (!ME.active) { showPending(user.email); return; }
+  $('login-view').classList.add('hidden');
+  $('app-view').classList.remove('hidden');
+  $('whoami').textContent = ME.name || ME.email;
+  await loadMaster();
+  buildTabs();
+  showTab(ME.role === 'operator' ? 'entry' : ME.role === 'quality' ? 'quality' : 'daily');
+}
+function showPending(email) {
+  $('login-view').classList.add('hidden');
+  $('pending-view').classList.remove('hidden');
+  $('pending-email').textContent = email;
+}
+$('pending-logout').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+$('req-access-btn').onclick = () => { $('req-form').classList.remove('hidden'); };
+$('req-submit').onclick = async () => {
+  const { error } = await sb.from('access_requests').insert({
+    email: ME.email, name: ME.name, requested_role: $('req-role').value, note: $('req-note').value.trim() || null,
+  });
+  if (error) return toast('⚠ ' + error.message);
+  $('req-submit').classList.add('hidden'); $('req-form').classList.add('hidden'); $('req-done').classList.remove('hidden');
+};
+$('logout-btn').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+
+async function loadMaster() {
+  const [l, i, s, d] = await Promise.all([
+    sb.from('lines').select('id,name,section').eq('active', true).order('name'),
+    sb.from('items').select('id,code,name,pg,line_id,target_productivity,target_qty').eq('active', true).order('name'),
+    sb.from('time_slots').select('label').eq('active', true).order('sort_order'),
+    sb.from('defect_types').select('id,name').eq('active', true).order('name'),
+  ]);
+  LINES = l.data || []; ITEMS = i.data || []; SLOTS = (s.data || []).map(x => x.label); DTYPES = d.data || [];
+  const sections = [...new Set(LINES.map(x => x.section))];
+  for (const sel of ['d-section', 's-section']) {
+    $(sel).innerHTML = '<option value="all">All Sections</option>' + sections.map(x => `<option>${esc(x)}</option>`).join('');
+  }
+  $('e-line').innerHTML = '<option value="">— select line —</option>' + LINES.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
+  $('e-item').innerHTML = '<option value="">— select item —</option>' + ITEMS.map(x => `<option value="${x.id}">[${esc(x.code)}] ${esc(x.name)}</option>`).join('');
+  $('q-item').innerHTML = '<option value="">— select item —</option>' + ITEMS.map(x => `<option value="${x.id}">[${esc(x.code)}] ${esc(x.name)}</option>`).join('');
+  $('q-type').innerHTML = '<option value="">— select type —</option>' + DTYPES.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
+  for (const sel of ['e-slot', 'q-slot']) $(sel).innerHTML = '<option value="">— select slot —</option>' + SLOTS.map(x => `<option>${esc(x)}</option>`).join('');
+  $('e-date').value = todayISO(); $('q-date').value = todayISO(); $('d-date').value = todayISO(); $('s-date').value = todayISO();
+}
+
+function buildTabs() {
+  const isAdm = ['super_admin', 'admin'].includes(ME.role);
+  const tabs = [];
+  if (['operator', 'manager', 'super_admin', 'admin'].includes(ME.role)) tabs.push(['entry', 'Entry']);
+  if (['quality', 'manager', 'super_admin', 'admin'].includes(ME.role)) tabs.push(['quality', 'Quality Entry']);
+  if (ME.role !== 'operator') tabs.push(['daily', 'Daily Status'], ['summary', 'Summary']);
+  if (ME.role === 'manager' || isAdm) tabs.push(['analytics', 'Analytics']);
+  $('tabs').innerHTML = tabs.map(([k, l]) => `<div class="tab" data-tab="${k}">${l}</div>`).join('');
+  document.querySelectorAll('.tab').forEach(t => t.onclick = () => showTab(t.dataset.tab));
+}
+function showTab(t) {
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x.dataset.tab === t));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
+  $('tab-' + t).classList.remove('hidden');
+  if (t === 'entry') renderMyEntries();
+  if (t === 'daily') renderDaily();
+  if (t === 'summary') renderSummary();
+  if (t === 'analytics') renderAnalytics();
+}
+
+// ---------- ENTRY ----------
+$('e-qty').oninput = $('e-mp').oninput = () => {
+  const q = +$('e-qty').value, m = +$('e-mp').value;
+  $('e-prod').textContent = (q > 0 && m > 0) ? (q / m).toFixed(1) : '—';
+};
+$('e-submit').onclick = async () => {
+  const item = ITEMS.find(x => x.id === $('e-item').value);
+  if (!$('e-item').value || !$('e-slot').value || !$('e-qty').value || !$('e-mp').value) return toast('Fill item, slot, qty and manpower');
+  const q = +$('e-qty').value, m = +$('e-mp').value;
+  const { error } = await sb.from('production_entries').insert({
+    entry_date: $('e-date').value, line_id: item.line_id, item_id: item.id, time_slot: $('e-slot').value,
+    qty: q, mp: m, productivity: +(q / m).toFixed(1),
+    target_productivity: item.target_productivity ?? null,
+    operating_minutes: 60, remarks: $('e-remarks').value.trim() || null, created_by: ME.id,
+  });
+  if (error) return toast('⚠ ' + error.message);
+  toast('Entry saved ✓'); $('e-qty').value = ''; $('e-mp').value = ''; $('e-remarks').value = ''; renderMyEntries();
+};
+async function renderMyEntries() {
+  const { data } = await sb.from('production_entries')
+    .select('id,item_id,time_slot,qty,mp,productivity,deleted_at').eq('created_by', ME.id)
+    .eq('entry_date', $('e-date').value).order('created_at', { ascending: false });
+  const rows = data || [];
+  const it = id => { const i = ITEMS.find(x => x.id === id); return i ? `[${i.code}] ${i.name}` : '—'; };
+  $('my-entries').innerHTML = '<tr><th>Item</th><th>Slot</th><th>Qty</th><th>MP</th><th>Prod.</th><th></th></tr>' +
+    rows.map(r => `<tr class="${r.deleted_at ? 'opacity-50' : ''}"><td>${esc(it(r.item_id))}</td><td>${esc(r.time_slot)}</td><td>${r.qty}</td><td>${r.mp}</td><td>${r.productivity ?? '—'}</td>
+      <td>${!r.deleted_at ? `<button class="btn btn-sec" onclick="delEntry('${r.id}')">Delete</button>` : 'trashed'}</td></tr>`).join('')
+    || '<tr><td colspan="6" class="text-center text-slate-400 py-3">No entries today.</td></tr>';
+}
+async function delEntry(id) {
+  const { error } = await sb.from('production_entries').update({ deleted_at: new Date().toISOString() }).eq('id', id);
+  if (error) return toast('⚠ ' + error.message);
+  toast('Entry deleted'); renderMyEntries();
+}
+// quality entry
+$('q-submit').onclick = async () => {
+  if (!$('q-item').value || !$('q-type').value || !$('q-slot').value || !$('q-qty').value) return toast('Fill item, type, slot and qty');
+  const item = ITEMS.find(x => x.id === $('q-item').value);
+  const { error } = await sb.from('defects').insert({
+    entry_date: $('q-date').value, item_id: item.id, defect_type_id: $('q-type').value,
+    time_slot: $('q-slot').value, qty: +$('q-qty').value, created_by: ME.id,
+  });
+  if (error) return toast('⚠ ' + error.message);
+  toast('Defect saved ✓'); $('q-qty').value = '';
+};
+
+// ---------- DAILY STATUS ----------
+let dailyRows = [];
+async function fetchDay(date) {
+  const { data } = await sb.from('production_entries')
+    .select('line_id,item_id,time_slot,qty,mp,productivity,target_productivity').eq('entry_date', date).is('deleted_at', null);
+  dailyRows = data || [];
+}
+async function renderDaily() {
+  await fetchDay($('d-date').value);
+  const sec = $('d-section').value, metric = $('d-metric').value;
+  const lineIds = [...new Set(dailyRows.map(r => r.line_id))];
+  const lines = LINES.filter(l => lineIds.includes(l.id) && (sec === 'all' || l.section === sec));
+  $('d-note').textContent = lines.length + ' lines with data';
+  const isQty = metric === 'qty';
+  $('d-grid').innerHTML = '';
+  for (const line of lines) {
+    const rows = dailyRows.filter(r => r.line_id === line.id);
+    const byItem = {};
+    rows.forEach(r => { byItem[r.item_id] = (byItem[r.item_id] || 0) + r.qty; });
+    const total = Object.values(byItem).reduce((a, b) => a + b, 0);
+    const mp = Math.max(...rows.map(r => r.mp || 0));
+    const prod = rows.reduce((s, r) => s + (r.productivity || 0) * r.qty, 0) / (total || 1);
+    const tgt = rows.reduce((s, r) => s + (r.target_productivity || 0) * r.qty, 0) / (total || 1);
+    const slots = SLOTS.map(sl => ({ slot: sl, qty: rows.filter(r => r.time_slot === sl).reduce((a, r) => a + r.qty, 0), tgt: tgt }));
+    const peak = Math.max(...slots.map(s => s.qty), 1);
+    const card = document.createElement('div');
+    card.className = 'card p-3';
+    card.innerHTML = `<div class="flex justify-between items-start mb-1">
+        <div><div class="font-black text-slate-800 text-sm">${esc(line.name)}</div>
+        <div class="text-[10px] font-bold text-slate-400 uppercase">${esc(line.section)}</div></div>
+        <div class="text-right"><div class="text-[9px] font-bold text-slate-400 uppercase">Total</div>
+        <div class="font-black text-teal-700">${total.toLocaleString()}</div></div></div>
+      <div class="space-y-0.5">${slots.map(s => `
+        <div class="flex items-center gap-1.5">
+          <span class="text-[8px] font-bold text-slate-400 w-16 shrink-0">${s.slot.replace(' - ', '–')}</span>
+          <div class="flex-1 bg-slate-100 rounded h-3 relative">
+            <div class="h-3 rounded ${s.qty > 0 ? (s.qty / peak >= .9 ? 'bg-emerald-500' : s.qty / peak >= .5 ? 'bg-amber-400' : 'bg-red-400') : ''}" style="width:${Math.round(s.qty / peak * 100)}%"></div>
+          </div>
+          <span class="text-[9px] font-bold text-slate-500 w-8 text-right">${s.qty || ''}</span>
+        </div>`).join('')}</div>
+      <div class="grid grid-cols-3 gap-1 mt-2 text-center text-[10px] font-bold">
+        <div class="bg-slate-50 rounded py-1">MP ${mp}</div>
+        <div class="bg-slate-50 rounded py-1">${isQty ? 'Qty ' + total.toLocaleString() : 'Prod ' + prod.toFixed(1)}</div>
+        <div class="bg-slate-50 rounded py-1">Tgt ${tgt.toFixed(0)}</div>
+      </div>`;
+    $('d-grid').appendChild(card);
+  }
+}
+$('d-date').onchange = renderDaily; $('d-section').onchange = renderDaily; $('d-metric').onchange = renderDaily;
+
+// ---------- SUMMARY ----------
+let sumRows = [];
+async function fetchSummary() {
+  const { data } = await sb.from('production_entries')
+    .select('line_id,item_id,time_slot,qty,mp,productivity,target_productivity').eq('entry_date', $('s-date').value).is('deleted_at', null);
+  sumRows = data || [];
+}
+async function renderSummary() {
+  await fetchSummary();
+  const sec = $('s-section').value, li = $('s-line').value, it = $('s-item').value, pg = $('s-pg').value;
+  const lineOf = id => LINES.find(l => l.id === id);
+  const itemOf = id => ITEMS.find(i => i.id === id);
+  let rows = sumRows.filter(r => {
+    const l = lineOf(r.line_id), i = itemOf(r.item_id);
+    if (!l || !i) return false;
+    if (sec !== 'all' && l.section !== sec) return false;
+    if (li !== 'all' && r.line_id !== li) return false;
+    if (it !== 'all' && r.item_id !== it) return false;
+    if (pg !== 'all' && i.pg !== pg) return false;
+    return true;
+  });
+  // populate filter options once
+  const ls = new Set(), is = new Set(), ps = new Set();
+  sumRows.forEach(r => { const l = lineOf(r.line_id), i = itemOf(r.item_id); if (l) ls.add(l.id); if (i) { is.add(i.id); ps.add(i.pg); } });
+  $('s-line').innerHTML = '<option value="all">All Lines</option>' + [...ls].map(id => `<option value="${id}">${esc(LINES.find(l => l.id === id).name)}</option>`).join('');
+  $('s-item').innerHTML = '<option value="all">All Items</option>' + [...is].map(id => `<option value="${id}">[${esc(itemOf(id).code)}] ${esc(itemOf(id).name)}</option>`).join('');
+  $('s-pg').innerHTML = '<option value="all">All PGs</option>' + [...ps].map(p => `<option>${esc(p)}</option>`).join('');
+  if (sec !== 'all') $('s-section').value = sec;
+
+  const totalQty = rows.reduce((a, r) => a + r.qty, 0);
+  const peakMp = Math.max(...rows.map(r => r.mp || 0), 0);
+  const wProd = rows.reduce((a, r) => a + (r.productivity || 0) * r.qty, 0);
+  const wTgt = rows.reduce((a, r) => a + (r.target_productivity || 0) * r.qty, 0);
+  const actProd = totalQty ? wProd / totalQty : 0, tgtProd = totalQty ? wTgt / totalQty : 0;
+  const ach = tgtProd ? (actProd / tgtProd * 100) : 0;
+  // FPY needs defects
+  const { data: defs } = await sb.from('defects').select('qty').eq('entry_date', $('s-date').value).is('deleted_at', null);
+  const defQ = (defs || []).reduce((a, d) => a + d.qty, 0);
+  const fpy = totalQty + defQ ? (totalQty / (totalQty + defQ) * 100) : null;
+
+  const kpi = (label, val, cls) => `<div class="card p-3 text-center"><div class="text-[10px] font-black text-slate-400 uppercase">${label}</div><div class="text-2xl font-black ${cls || 'text-slate-800'}">${val}</div></div>`;
+  $('s-kpis').innerHTML =
+    kpi('Total Qty', totalQty.toLocaleString()) +
+    kpi('Peak MP', peakMp) +
+    kpi('Actual Prod.', actProd.toFixed(1), ach >= 90 ? 'text-emerald-600' : ach >= 75 ? 'text-amber-600' : 'text-red-500') +
+    kpi('Target Prod.', tgtProd.toFixed(1)) +
+    kpi('FPY', fpy === null ? '—' : fpy.toFixed(1) + '%', fpy === null ? 'text-slate-400' : fpy >= 95 ? 'text-emerald-600' : fpy >= 90 ? 'text-amber-600' : 'text-red-500');
+
+  // matrix by line+item
+  const m = {};
+  rows.forEach(r => {
+    const key = r.line_id + '::' + r.item_id;
+    m[key] = m[key] || { line_id: r.line_id, item_id: r.item_id, qty: 0, mp: 0, wP: 0, wT: 0 };
+    const e = m[key]; e.qty += r.qty; e.mp = Math.max(e.mp, r.mp || 0);
+    e.wP += (r.productivity || 0) * r.qty; e.wT += (r.target_productivity || 0) * r.qty;
+  });
+  const keys = Object.keys(m).sort((a, b) => {
+    const la = lineOf(m[a].line_id), lb = lineOf(m[b].line_id);
+    if (la.section !== lb.section) return la.section < lb.section ? -1 : 1;
+    return m[b].qty - m[a].qty;
+  });
+  $('s-matrix').innerHTML = '<tr><th>Line</th><th>Item</th><th>PG</th><th>Qty</th><th>MP</th><th>Act.</th><th>Tgt.</th><th>Ach.</th></tr>' +
+    keys.map(k => {
+      const e = m[k], l = lineOf(e.line_id), i = itemOf(e.item_id);
+      const act = e.qty ? e.wP / e.qty : 0, tgt = e.qty ? e.wT / e.qty : 0, a = tgt ? act / tgt * 100 : 0;
+      const cls = a >= 95 ? 'text-emerald-600' : a >= 90 ? 'text-amber-600' : 'text-red-500';
+      return `<tr><td class="font-bold text-slate-700">${esc(l.name)}</td><td>[${esc(i.code)}] ${esc(i.name)}</td><td class="text-[11px] text-slate-500">${esc(i.pg)}</td><td class="font-bold">${e.qty.toLocaleString()}</td><td>${e.mp}</td><td>${act.toFixed(1)}</td><td>${tgt.toFixed(1)}</td><td class="font-black ${cls}">${a.toFixed(0)}%</td></tr>`;
+    }).join('') || '<tr><td colspan="8" class="text-center text-slate-400 py-3">No production recorded for this date.</td></tr>';
+
+  // best/worst
+  const sorted = keys.map(k => ({ ...m[k], a: (() => { const e = m[k]; const t = e.qty ? e.wT / e.qty : 0; return t ? (e.wP / e.qty) / t : 0; })() })).filter(x => x.qty > 0).sort((a, b) => b.a - a.a);
+  const disp = x => { const i = itemOf(x.item_id), l = lineOf(x.line_id); return `[${i.code}] ${i.name} — ${l.name}`; };
+  $('s-best').innerHTML = sorted.length ? `${esc(disp(sorted[0]))}<div class="text-emerald-600 font-black mt-1">${(sorted[0].a * 100).toFixed(0)}% achievement</div>` : 'No data';
+  $('s-worst').innerHTML = sorted.length > 1 ? `${esc(disp(sorted[sorted.length - 1]))}<div class="text-red-500 font-black mt-1">${(sorted[sorted.length - 1].a * 100).toFixed(0)}% achievement</div>` : 'No data';
+  const byLine = {};
+  rows.forEach(r => { byLine[r.line_id] = (byLine[r.line_id] || 0) + r.qty; });
+  $('s-ranking').innerHTML = Object.entries(byLine).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([id, q], i) => {
+    const l = lineOf(id); const pct = rows.filter(r => r.line_id === id).reduce((s, r) => s + (r.productivity || 0) * r.qty, 0) / (q || 1);
+    return `<div class="flex items-center gap-2"><span class="text-[10px] font-black text-slate-400 w-4">${i + 1}</span><span class="text-[11px] font-bold text-slate-700 flex-1 truncate">${esc(l ? l.name : '?')}</span><span class="text-[11px] font-black text-teal-700">${q.toLocaleString()}</span><span class="text-[10px] font-bold text-slate-400">${pct.toFixed(1)}</span></div>`;
+  }).join('') || '<div class="text-slate-400 text-xs">No data</div>';
+}
+$('s-date').onchange = renderSummary; $('s-section').onchange = renderSummary; $('s-line').onchange = renderSummary; $('s-item').onchange = renderSummary; $('s-pg').onchange = renderSummary;
+$('s-clear').onclick = () => { $('s-section').value = 'all'; $('s-line').value = 'all'; $('s-item').value = 'all'; $('s-pg').value = 'all'; renderSummary(); };
+$('s-export').onclick = () => {
+  const t = $('s-matrix'); let csv = '';
+  t.querySelectorAll('tr').forEach(tr => { csv += [...tr.children].map(td => '"' + td.innerText.replace(/"/g, '""') + '"').join(',') + '\n'; });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv' }));
+  a.download = 'summary_' + $('s-date').value + '.csv'; a.click();
+};
+
+// ---------- ANALYTICS ----------
+async function renderAnalytics() {
+  const preset = $('a-preset').value, metric = $('a-metric').value;
+  const today = new Date();
+  let from = null;
+  if (preset === '7') { from = new Date(); from.setDate(from.getDate() - 6); }
+  else if (preset === '30') { from = new Date(); from.setDate(from.getDate() - 29); }
+  else if (preset === 'today') from = new Date();
+  let q = sb.from('production_entries').select('entry_date,qty,mp,productivity').is('deleted_at', null);
+  if (from) q = q.gte('entry_date', from.toISOString().slice(0, 10));
+  const { data } = await q;
+  const rows = data || [];
+  const byDay = {};
+  rows.forEach(r => { byDay[r.entry_date] = byDay[r.entry_date] || { qty: 0, wP: 0, mp: 0 }; const e = byDay[r.entry_date]; e.qty += r.qty; e.wP += (r.productivity || 0) * r.qty; e.mp = Math.max(e.mp, r.mp || 0); });
+  const dates = Object.keys(byDay).sort();
+  const vals = dates.map(d => metric === 'qty' ? byDay[d].qty : +(byDay[d].wP / (byDay[d].qty || 1)).toFixed(1));
+  const totQty = rows.reduce((a, r) => a + r.qty, 0);
+  const wP = rows.reduce((a, r) => a + (r.productivity || 0) * r.qty, 0);
+  const avgP = totQty ? (wP / totQty).toFixed(1) : '0';
+  $('a-kpis').innerHTML =
+    `<div class="card p-3"><div class="text-[10px] font-black text-slate-400 uppercase">Days</div><div class="text-xl font-black">${dates.length}</div></div>` +
+    `<div class="card p-3"><div class="text-[10px] font-black text-slate-400 uppercase">Total Qty</div><div class="text-xl font-black text-teal-700">${totQty.toLocaleString()}</div></div>` +
+    `<div class="card p-3"><div class="text-[10px] font-black text-slate-400 uppercase">Avg Productivity</div><div class="text-xl font-black">${avgP}</div></div>` +
+    `<div class="card p-3"><div class="text-[10px] font-black text-slate-400 uppercase">Peak day</div><div class="text-xl font-black">${dates.length ? Math.max(...dates.map(d => byDay[d].qty)).toLocaleString() : 0}</div></div>`;
+  if (CH) CH.destroy();
+  CH = new ApexCharts($('a-chart'), {
+    chart: { type: 'area', height: 340, fontFamily: 'Inter' },
+    series: [{ name: metric === 'qty' ? 'Production qty' : 'Productivity', data: vals }],
+    xaxis: { categories: dates.map(d => fmtDate(d)) },
+    colors: ['#0f766e'], stroke: { curve: 'smooth', width: 3 },
+    fill: { type: 'gradient', gradient: { opacityFrom: 0.4, opacityTo: 0.05 } },
+    dataLabels: { enabled: false },
+  });
+  CH.render();
+}
+$('a-preset').onchange = renderAnalytics; $('a-metric').onchange = renderAnalytics;
+
+boot();
+</script>
+</body>
+</html>
