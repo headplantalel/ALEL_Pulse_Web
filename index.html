@@ -233,7 +233,19 @@ async function loadMaster() {
   $('q-item').innerHTML = '<option value="">— select item —</option>' + ITEMS.map(x => `<option value="${x.id}">[${esc(x.code)}] ${esc(x.name)}</option>`).join('');
   $('q-type').innerHTML = '<option value="">— select type —</option>' + DTYPES.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('');
   for (const sel of ['e-slot', 'q-slot']) $(sel).innerHTML = '<option value="">— select slot —</option>' + SLOTS.map(x => `<option>${esc(x)}</option>`).join('');
-  $('e-date').value = todayISO(); $('q-date').value = todayISO(); $('d-date').value = todayISO(); $('s-date').value = todayISO();
+  $('e-date').value = todayISO(); $('q-date').value = todayISO();
+  // Default dashboard dates to the LATEST date that has data (not today — the factory may be between shifts).
+  const { data: latest } = await sb.from('production_entries').select('entry_date').is('deleted_at', null).order('entry_date', { ascending: false }).limit(1);
+  const latestDate = latest && latest[0] ? latest[0].entry_date : todayISO();
+  $('d-date').value = latestDate; $('s-date').value = latestDate;
+  $('latest-data-note')?.remove();
+  if (latestDate !== todayISO()) {
+    const note = document.createElement('div');
+    note.id = 'latest-data-note';
+    note.className = 'text-[11px] font-bold text-amber-600 mb-2';
+    note.textContent = 'No data for today — showing the latest data date: ' + latestDate;
+    $('tab-daily').prepend(note);
+  }
 }
 
 function buildTabs() {
@@ -314,6 +326,11 @@ async function renderDaily() {
   const sec = $('d-section').value, metric = $('d-metric').value;
   const lineIds = [...new Set(dailyRows.map(r => r.line_id))];
   const lines = LINES.filter(l => lineIds.includes(l.id) && (sec === 'all' || l.section === sec));
+  if (!lines.length) {
+    $('d-grid').innerHTML = `<div class="card p-6 text-center text-slate-400 text-sm font-semibold col-span-full">No production data for ${$('d-date').value} — pick another date.</div>`;
+    $('d-note').textContent = 'no data';
+    return;
+  }
   $('d-note').textContent = lines.length + ' lines with data';
   const isQty = metric === 'qty';
   $('d-grid').innerHTML = '';
