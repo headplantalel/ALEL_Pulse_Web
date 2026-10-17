@@ -36,8 +36,8 @@ async function getMaster() {
   if (masterCache) return masterCache;
   const [l, i, d, t] = await Promise.all([
     window.sb.from('lines').select('id,name,section,active'),
-    window.sb.from('items').select('id,code,name,pg,line_id,target_productivity,active'),
-    window.sb.from('defect_types').select('id,name,active'),
+    window.sb.from('items').select('id,code,name,pg,line_id,target_productivity,defect_type_code,active'),
+    window.sb.from('defect_types').select('id,name,code,active'),
     window.sb.from('time_slots').select('label,sort_order,active'),
   ]);
   masterCache = { lines: l.data || [], items: i.data || [], dtypes: d.data || [], slots: (t.data || []).map(x => x.label) };
@@ -131,7 +131,7 @@ window.callAPI = async function (payload, callback, retries) {
         times: m.slots,
         itemPgs: Object.fromEntries(m.items.map(x => [x.name, x.pg])),
         lineSections: Object.fromEntries(m.lines.map(x => [x.name, x.section])),
-        itemDefectCodes: Object.fromEntries(m.items.map(x => [x.name, x.code])),
+        itemDefectCodes: Object.fromEntries(m.items.map(x => [x.name, x.defect_type_code || ''])),
         defectTypes: m.dtypes.map(x => x.name),
       };
     }
@@ -169,7 +169,9 @@ window.callAPI = async function (payload, callback, retries) {
 
     else if (a === 'getDefectTypes') {
       const m = await getMaster();
-      resp = { types: m.dtypes.map(x => x.name) };
+      const byCode = {};
+      m.dtypes.forEach(dt => { const code = dt.code || '1'; (byCode[code] = byCode[code] || []).push(dt.name); });
+      resp = { byCode: byCode };
     }
 
     else if (a === 'getHourlyFPY') {
