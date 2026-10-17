@@ -69,7 +69,7 @@ async function fetchRawRows(fromIso, toIso) {
       item: it ? it.name : '', itemCode: it ? it.code : '', pg: it ? it.pg : '',
       time: r.time_slot, qty: r.qty, mp: r.mp || 0,
       productivity: r.productivity, targetProductivity: r.target_productivity,
-      minutes: r.operating_minutes || 0, remarks: r.remarks || '', rowIndex: prodRowToId.get(r.id) || null,
+      minutes: r.operating_minutes || 0, remarks: r.remarks || '',
     };
   });
 }
@@ -89,8 +89,9 @@ async function fetchDefectRows(fromIso, toIso) {
     const it = itemOf(r.item_id);
     const dt = masterCache.dtypes.find(x => x.id === r.defect_type_id);
     const d = parseAny(r.entry_date);
-    let ri = defRowToId.get(r.id);
-    if (ri === undefined) { ri = ++defRowIndex; defRowToId.set(r.id, ri); }
+    let ri = null;
+    defRowToId.forEach((v, k) => { if (v === r.id) ri = k; });
+    if (ri === null) { ri = ++defRowIndex; defRowToId.set(ri, r.id); }
     return {
       date: mmmDd(d), line: lineName(it ? it.line_id : null), item: it ? it.name : '', itemCode: it ? it.code : '',
       time: r.time_slot, defectiveQty: r.qty, defectType: dt ? dt.name : '', remarks: r.remarks || '', rowIndex: ri,
