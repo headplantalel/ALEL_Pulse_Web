@@ -121,6 +121,7 @@ window.callAPI = async function (payload, callback, retries) {
       const role = u.role;
       const isAdm = role === 'admin' || role === 'super_admin';
       resp = {
+        isAdmin: isAdm,
         authorizedEntry: ['operator', 'manager'].includes(role) || isAdm,
         authorizedDashboard: ['manager'].includes(role) || isAdm,
         authorizedFPY: ['quality', 'manager'].includes(role) || isAdm,
